@@ -79,6 +79,44 @@ class GitHubAppAuth:
 
         raise BadCredentialsException(401, "Invalid GitHub credentials", None)
 
+    def get_github_client_with_installation_token(self, per_page: int | None = None) -> Github:
+        """Get authenticated GitHub client using installation access token.
+
+        This method creates a GitHub client using installation access tokens,
+        which are required for certain operations like creating Pull Requests.
+
+        Args:
+            per_page: Number of items per page for pagination.
+
+        Returns:
+            Authenticated GitHub client instance using installation access token.
+
+        Raises:
+            BadCredentialsException: If authentication fails.
+            ValueError: If GitHub App is not properly configured.
+
+        """
+        per_page = per_page or GITHUB_ITEMS_PER_PAGE
+
+        if not self._is_app_configured():
+            raise ValueError(
+                "GitHub App configuration is incomplete. "
+                "Installation access tokens require GitHub App setup."
+            )
+
+        try:
+            logger.warning("Using GitHub App installation access token")
+            return Github(
+                auth=Auth.AppAuth(
+                    app_id=self.app_id,
+                    private_key=self.private_key,
+                ).get_installation_auth(int(settings.GITHUB_APP_INSTALLATION_ID)),
+                per_page=per_page,
+            )
+
+        except Exception:
+            logger.exception("Failed to obtain installation access token")
+
 
 def get_github_client(per_page: int | None = None) -> Github:
     """Get authenticated GitHub client.
@@ -91,3 +129,19 @@ def get_github_client(per_page: int | None = None) -> Github:
 
     """
     return GitHubAppAuth().get_github_client(per_page=per_page)
+
+
+def get_github_client_with_installation_token(per_page: int | None = None) -> Github:
+    """Get authenticated GitHub client using installation access token.
+
+    This function creates a GitHub client using installation access tokens,
+    which are required for certain operations like creating Pull Requests.
+
+    Args:
+        per_page: Number of items per page for pagination.
+
+    Returns:
+        Authenticated GitHub client instance using installation access token.
+
+    """
+    return GitHubAppAuth().get_github_client_with_installation_token(per_page=per_page)
